@@ -13,8 +13,9 @@ class Notification:
         self.notif_id = notifications_count
         notifications_count += 1
         if time_int == 0:
-            self.time = datetime.strptime(date + ' ' + time,
-                                          '%d.%m.%Y %H:%M').timestamp()
+            self.time = datetime.strptime(
+                date + " " + time, "%d.%m.%Y %H:%M"
+            ).timestamp()
         else:
             self.time = time_int
         self.user_id = user_id
@@ -40,7 +41,7 @@ class Notification:
         return self.time != other.time
 
 
-bot = telebot.TeleBot('key')
+bot = telebot.TeleBot("key")
 notifications = RedBlackTree()
 event = threading.Event()
 notifications_lock = threading.Lock()
@@ -68,9 +69,9 @@ def notif_handler():
             notifications = notifications.remove(curr_request)
             next_notif_time = curr_request_time + curr_request.time_interval
             if curr_request.time_interval != 0 and next_notif_time < curr_time:
-                next_notif_time += ((curr_time - next_notif_time) //
-                                    curr_request.time_interval + 1) * \
-                                   curr_request.time_interval
+                next_notif_time += (
+                    (curr_time - next_notif_time) // curr_request.time_interval + 1
+                ) * curr_request.time_interval
 
             if curr_request.time_interval != 0:
                 curr_request.time = next_notif_time
@@ -93,30 +94,29 @@ def notif_handler():
             notifications_lock.release()
 
 
-t1 = threading.Thread(name='handler', target=notif_handler)
+t1 = threading.Thread(name="handler", target=notif_handler)
 t1.start()
 
 
 def main_menu(user_id):
     keyboard = types.ReplyKeyboardMarkup(resize_keyboard=True)
 
-    key_new_notif = types.KeyboardButton(text='Создать напоминалку')
+    key_new_notif = types.KeyboardButton(text="Создать напоминалку")
     keyboard.add(key_new_notif)
 
-    key_del_notif = types.KeyboardButton(text='Удалить напоминалку')
+    key_del_notif = types.KeyboardButton(text="Удалить напоминалку")
     keyboard.add(key_del_notif)
 
-    key_change_notif = types.KeyboardButton(text='Изменить напоминалку')
+    key_change_notif = types.KeyboardButton(text="Изменить напоминалку")
     keyboard.add(key_change_notif)
 
-    key_my_notif = types.KeyboardButton(text='Мои напоминалки')
+    key_my_notif = types.KeyboardButton(text="Мои напоминалки")
     keyboard.add(key_my_notif)
 
-    bot.send_message(user_id, text='Что вам угодно, повелитель?',
-                     reply_markup=keyboard)
+    bot.send_message(user_id, text="Что вам угодно, повелитель?", reply_markup=keyboard)
 
 
-def show_notifications(chat_id, callback=''):
+def show_notifications(chat_id, callback=""):
     notifications_lock.acquire()
     keyboard = types.InlineKeyboardMarkup(row_width=2)
 
@@ -128,11 +128,11 @@ def show_notifications(chat_id, callback=''):
     for notif in notifications.inorder_traverse():
         if notif.user_id == chat_id:
             finded_notif = True
-            format_ = f'%d.%m.%Y %H:%M '
+            format_ = f"%d.%m.%Y %H:%M "
             key_button = types.InlineKeyboardButton(
-                text=datetime.fromtimestamp(notif.time).strftime(format_) +
-                notif.body,
-                callback_data=callback + str(notif.notif_id))
+                text=datetime.fromtimestamp(notif.time).strftime(format_) + notif.body,
+                callback_data=callback + str(notif.notif_id),
+            )
             keyboard.add(key_button)
 
     if finded_notif is False:
@@ -140,38 +140,40 @@ def show_notifications(chat_id, callback=''):
         return False
 
     notifications_lock.release()
-    bot.send_message(chat_id, 'Выбери напоминкалку', reply_markup=keyboard)
+    bot.send_message(chat_id, "Выбери напоминкалку", reply_markup=keyboard)
     return True
 
 
-@bot.message_handler(content_types=['text'])
+@bot.message_handler(content_types=["text"])
 def message_handler(message):
-    if message.text == '/start':
+    if message.text == "/start":
         keyboard = types.ReplyKeyboardMarkup(resize_keyboard=True)
 
-        key_new_notif = types.KeyboardButton(text='Создать напоминалку')
+        key_new_notif = types.KeyboardButton(text="Создать напоминалку")
         keyboard.add(key_new_notif)
 
         bot.send_message(
             message.from_user.id,
-            text='Привет, можешь создать свою первую напоминалку!',
-            reply_markup=keyboard)
+            text="Привет, можешь создать свою первую напоминалку!",
+            reply_markup=keyboard,
+        )
 
-    elif message.text == 'Создать напоминалку':
+    elif message.text == "Создать напоминалку":
         bot.send_message(
             message.chat.id,
-            "Напиши время, когда должно придти уведомление (в формате чч:мм)")
+            "Напиши время, когда должно придти уведомление (в формате чч:мм)",
+        )
         bot.register_next_step_handler(message, get_time)
 
-    elif message.text == 'Удалить напоминалку':
-        show_notifications(message.chat.id, 'delete')
+    elif message.text == "Удалить напоминалку":
+        show_notifications(message.chat.id, "delete")
 
-    elif message.text == 'Изменить напоминалку':
-        if not show_notifications(message.chat.id, 'change'):
+    elif message.text == "Изменить напоминалку":
+        if not show_notifications(message.chat.id, "change"):
             return
 
-    elif message.text == 'Мои напоминалки':
-        show_notifications(message.chat.id, 'my')
+    elif message.text == "Мои напоминалки":
+        show_notifications(message.chat.id, "my")
     else:
         main_menu(message.from_user.id)
 
@@ -179,48 +181,53 @@ def message_handler(message):
 def get_time(message, change=False, prev_notif_numb=0):
     # проверить на корректность
     if message.text is None:
-        bot.send_message(message.from_user.id,
-                         'Нам нужен текст! Без него некуда...\n'
-                         'Попробуй ещё раз.')
-        bot.register_next_step_handler(message, get_time, change,
-                                       prev_notif_numb)
+        bot.send_message(
+            message.from_user.id,
+            "Нам нужен текст! Без него некуда...\n" "Попробуй ещё раз.",
+        )
+        bot.register_next_step_handler(message, get_time, change, prev_notif_numb)
         return
     time_row = message.text[:5]
-    time = time_row[:2] + ':' + time_row[3:5]
+    time = time_row[:2] + ":" + time_row[3:5]
     try:
         assert 0 <= int(time[0:2]) <= 23
         assert 0 <= int(time[3:5]) <= 59
-    except:
-        bot.send_message(message.from_user.id,
-                         'Неверный формат времени!\n'
-                         'Время должно быть формата чч:мм\n'
-                         'Попробуй ещё раз')
-        bot.register_next_step_handler(message, get_time, change,
-                                       prev_notif_numb)
+    except AssertionError:
+        bot.send_message(
+            message.from_user.id,
+            "Неверный формат времени!\n"
+            "Время должно быть формата чч:мм\n"
+            "Попробуй ещё раз",
+        )
+        bot.register_next_step_handler(message, get_time, change, prev_notif_numb)
         return
 
     if not change:
-        bot.send_message(message.from_user.id,
-                         'Когда должно придти первое уведомление?\n'
-                         'Напиши дату в формате дд.мм.гггг в пределах одного '
-                         'месяца')
+        bot.send_message(
+            message.from_user.id,
+            "Когда должно придти первое уведомление?\n"
+            "Напиши дату в формате дд.мм.гггг в пределах одного "
+            "месяца",
+        )
     else:
-        bot.send_message(message.from_user.id,
-                         'Когда должно придти следующее уведомление?\n'
-                         'Напиши дату в формате дд.мм.гггг в пределах одного '
-                         'месяца')
-    bot.register_next_step_handler(message, get_date, time, change,
-                                   prev_notif_numb)
+        bot.send_message(
+            message.from_user.id,
+            "Когда должно придти следующее уведомление?\n"
+            "Напиши дату в формате дд.мм.гггг в пределах одного "
+            "месяца",
+        )
+    bot.register_next_step_handler(message, get_date, time, change, prev_notif_numb)
 
 
 def get_body(message, time, date, time_interval, change, prev_notif_numb):
     if message.text is None:
-        bot.send_message(message.from_user.id,
-                         'Нам нужен текст! Без него некуда...\n'
-                         'Попробуй ещё раз.')
-        bot.register_next_step_handler(message, get_body,
-                                       time, date, time_interval,
-                                       change, prev_notif_numb)
+        bot.send_message(
+            message.from_user.id,
+            "Нам нужен текст! Без него некуда...\n" "Попробуй ещё раз.",
+        )
+        bot.register_next_step_handler(
+            message, get_body, time, date, time_interval, change, prev_notif_numb
+        )
         return
 
     body = message.text
@@ -228,130 +235,134 @@ def get_body(message, time, date, time_interval, change, prev_notif_numb):
 
     if not change:
         create_new_notification(time, body, date, user_id, time_interval)
-        bot.send_message(user_id, 'Напоминалка создана!')
+        bot.send_message(user_id, "Напоминалка создана!")
         main_menu(user_id)
     else:
         deleted_notif = find_notif(str(prev_notif_numb))
         if deleted_notif is None:
-            bot.send_message(user_id,
-                             'Кажется, напоминалка уже была удалена...\n'
-                             'Попробуйте ещё раз!')
+            bot.send_message(
+                user_id,
+                "Кажется, напоминалка уже была удалена...\n" "Попробуйте ещё раз!",
+            )
             main_menu(user_id)
         else:
             notificaion_remove(deleted_notif, user_id)
             create_new_notification(time, body, date, user_id, time_interval)
-            bot.send_message(user_id, 'Напоминалка изменена!')
+            bot.send_message(user_id, "Напоминалка изменена!")
             main_menu(user_id)
 
 
 def get_date(message, time, change, prev_notif_numb):
     if message.text is None:
-        bot.send_message(message.from_user.id,
-                         'Нам нужен текст! Без него некуда...\n'
-                         'Попробуй ещё раз.')
-        bot.register_next_step_handler(message, get_date, time, change,
-                                       prev_notif_numb)
+        bot.send_message(
+            message.from_user.id,
+            "Нам нужен текст! Без него некуда...\n" "Попробуй ещё раз.",
+        )
+        bot.register_next_step_handler(message, get_date, time, change, prev_notif_numb)
         return
 
     date_row = message.text[:10]
-    date = date_row[:2] + '.' + date_row[3:5] + '.' + date_row[6:10]
+    date = date_row[:2] + "." + date_row[3:5] + "." + date_row[6:10]
     try:
-        datetime.strptime(date, '%d.%m.%Y').timestamp()
-    except:
-        bot.send_message(
-            message.from_user.id,
-            'Неверный формат даты либо выбрана слишком ранняя дата!\n'
-            'Дата должна быть формата дд.мм.гггг\n'
-            'Попробуй ещё раз')
-        bot.register_next_step_handler(message, get_date, time, change,
-                                       prev_notif_numb)
-        return
-
-    try:
-        date_time = datetime.strptime(date, '%d.%m.%Y').timestamp()
+        date_time = datetime.strptime(date, "%d.%m.%Y").timestamp()
         now = datetime.now().timestamp()
         assert abs(now - date_time) // (60 * 60 * 24) <= 31
-    except:
+    except ValueError:
         bot.send_message(
             message.from_user.id,
-            'Выбрана слишком далёкая дата!\n'
-            'Дата должна быть в пределах одного месяца, куда уж больше?!\n'
-            'Попробуй ещё раз.')
-        bot.register_next_step_handler(message, get_date, time, change,
-                                       prev_notif_numb)
+            "Неверный формат даты либо выбрана слишком ранняя дата!\n"
+            "Дата должна быть формата дд.мм.гггг\n"
+            "Попробуй ещё раз",
+        )
+        bot.register_next_step_handler(message, get_date, time, change, prev_notif_numb)
+        return
+    except AssertionError:
+        bot.send_message(
+            message.from_user.id,
+            "Выбрана слишком далёкая дата!\n"
+            "Дата должна быть в пределах одного месяца, куда уж больше?!\n"
+            "Попробуй ещё раз.",
+        )
+        bot.register_next_step_handler(message, get_date, time, change, prev_notif_numb)
         return
 
     keyboard = types.ReplyKeyboardMarkup(resize_keyboard=True)
 
-    key_per_day = types.KeyboardButton(text='Раз в день')
+    key_per_day = types.KeyboardButton(text="Раз в день")
     keyboard.add(key_per_day)
 
-    key_per_week = types.KeyboardButton(text='Раз в неделю')
+    key_per_week = types.KeyboardButton(text="Раз в неделю")
     keyboard.add(key_per_week)
 
-    key_per_month = types.KeyboardButton(text='Раз в месяц')
+    key_per_month = types.KeyboardButton(text="Раз в месяц")
     keyboard.add(key_per_month)
 
-    key_several_days = types.KeyboardButton(text='Раз в несколько дней')
+    key_several_days = types.KeyboardButton(text="Раз в несколько дней")
     keyboard.add(key_several_days)
 
-    key_several_hours = types.KeyboardButton(text='Раз в несколько часов')
+    key_several_hours = types.KeyboardButton(text="Раз в несколько часов")
     keyboard.add(key_several_hours)
 
-    key_one_time = types.KeyboardButton(text='Один раз')
+    key_one_time = types.KeyboardButton(text="Один раз")
     keyboard.add(key_one_time)
 
-    bot.send_message(message.from_user.id,
-                     'Как часто должны приходить уведомления?',
-                     reply_markup=keyboard)
-    bot.register_next_step_handler(message, get_interval, time, date,
-                                   message.from_user.id, change,
-                                   prev_notif_numb)
+    bot.send_message(
+        message.from_user.id,
+        "Как часто должны приходить уведомления?",
+        reply_markup=keyboard,
+    )
+    bot.register_next_step_handler(
+        message, get_interval, time, date, message.from_user.id, change, prev_notif_numb
+    )
 
 
 def get_interval(message, time, date, user_id, change, prev_notif_numb):
     if message.text is None:
-        bot.send_message(message.from_user.id,
-                         'Нам нужен текст! Без него некуда...\n'
-                         'Попробуй ещё раз.')
-        bot.register_next_step_handler(message, get_interval,
-                                       time, date, user_id, change,
-                                       prev_notif_numb)
+        bot.send_message(
+            message.from_user.id,
+            "Нам нужен текст! Без него некуда...\n" "Попробуй ещё раз.",
+        )
+        bot.register_next_step_handler(
+            message, get_interval, time, date, user_id, change, prev_notif_numb
+        )
         return
 
     per_type = message.text
-    if per_type == 'Раз в день':
+    if per_type == "Раз в день":
         time_interval = 60 * 60 * 24
-    elif per_type == 'Раз в неделю':
+    elif per_type == "Раз в неделю":
         time_interval = 60 * 60 * 24 * 7
-    elif per_type == 'Раз в месяц':
+    elif per_type == "Раз в месяц":
         time_interval = 60 * 60 * 24 * 30
-    elif per_type == 'Раз в несколько дней':
+    elif per_type == "Раз в несколько дней":
         bot.send_message(
-            user_id,
-            'Раз в какое количество дней бот будет посылать сообщения?')
-        bot.register_next_step_handler(message, get_user_interval, time, date,
-                                       per_type, change, prev_notif_numb)
+            user_id, "Раз в какое количество дней бот будет посылать сообщения?"
+        )
+        bot.register_next_step_handler(
+            message, get_user_interval, time, date, per_type, change, prev_notif_numb
+        )
         return
-    elif per_type == 'Раз в несколько часов':
+    elif per_type == "Раз в несколько часов":
         bot.send_message(
-            user_id,
-            'Раз в какое количество часов бот будет посылать сообщения?')
-        bot.register_next_step_handler(message, get_user_interval, time, date,
-                                       per_type, change, prev_notif_numb)
+            user_id, "Раз в какое количество часов бот будет посылать сообщения?"
+        )
+        bot.register_next_step_handler(
+            message, get_user_interval, time, date, per_type, change, prev_notif_numb
+        )
         return
-    elif per_type == 'Один раз':
+    elif per_type == "Один раз":
         time_interval = 0
     else:
-        bot.send_message(user_id,
-                         'Не понимаю (\nПопробуй ещё раз!')
-        bot.register_next_step_handler(message, get_interval, time, date,
-                                       user_id, change, prev_notif_numb)
+        bot.send_message(user_id, "Не понимаю (\nПопробуй ещё раз!")
+        bot.register_next_step_handler(
+            message, get_interval, time, date, user_id, change, prev_notif_numb
+        )
         return
 
-    bot.send_message(user_id, 'Какое сообщение должен присылать бот?')
-    bot.register_next_step_handler(message, get_body, time, date,
-                                   time_interval, change, prev_notif_numb)
+    bot.send_message(user_id, "Какое сообщение должен присылать бот?")
+    bot.register_next_step_handler(
+        message, get_body, time, date, time_interval, change, prev_notif_numb
+    )
 
 
 def find_notif(str_id):
@@ -387,14 +398,14 @@ def none_notifications(user_id):
 #     main_menu(message.from_user.id)
 
 
-def create_new_notification(time, body, date, user_id, time_interval,
-                            prev_mess_id=0, new_time_int=0):
+def create_new_notification(
+    time, body, date, user_id, time_interval, prev_mess_id=0, new_time_int=0
+):
     global notifications
     notifications_lock.acquire()
-    notifications = notifications.insert(Notification(time, body, date,
-                                                      user_id,
-                                                      time_interval,
-                                                      new_time_int))
+    notifications = notifications.insert(
+        Notification(time, body, date, user_id, time_interval, new_time_int)
+    )
     notifications_lock.release()
     event_lock.acquire()
     event.set()
@@ -402,15 +413,16 @@ def create_new_notification(time, body, date, user_id, time_interval,
 
     if prev_mess_id != 0:
         keyboard = types.InlineKeyboardMarkup()
-        bot.edit_message_reply_markup(chat_id=user_id, message_id=prev_mess_id,
-                                      reply_markup=keyboard)
+        bot.edit_message_reply_markup(
+            chat_id=user_id, message_id=prev_mess_id, reply_markup=keyboard
+        )
 
 
 def notificaion_remove(notification, chat_id):
     global notifications
 
     if notification is None:
-        bot.send_message(chat_id, 'BRUUH, напоминалка не найдена(')
+        bot.send_message(chat_id, "BRUUH, напоминалка не найдена(")
         main_menu(chat_id)
         return False
 
@@ -430,138 +442,161 @@ def callback_worker(call):
     print(call.data)
     global notifications
 
-    if call.data[:14] == 'del_notif_conf':
-        _, notif_numb = call.data.split('#')
+    if call.data[:14] == "del_notif_conf":
+        _, notif_numb = call.data.split("#")
         keyboard = types.InlineKeyboardMarkup()
-        bot.edit_message_reply_markup(chat_id=call.message.chat.id,
-                                      message_id=call.message.id,
-                                      reply_markup=keyboard)
+        bot.edit_message_reply_markup(
+            chat_id=call.message.chat.id,
+            message_id=call.message.id,
+            reply_markup=keyboard,
+        )
         notif_to_delete = find_notif(notif_numb)
         if notif_to_delete is None:
-            bot.send_message(call.message.chat.id,
-                             'Напоминалка уже была удалена :(')
+            bot.send_message(call.message.chat.id, "Напоминалка уже была удалена :(")
             main_menu(call.message.chat.id)
             return
         notificaion_remove(notif_to_delete, call.message.chat.id)
-        bot.send_message(call.message.chat.id,
-                         'Напоминалка успешно удалена !')
+        bot.send_message(call.message.chat.id, "Напоминалка успешно удалена !")
         main_menu(call.message.chat.id)
 
-    elif call.data[:14] == 'del_notif_deny':
-        _, user_id = call.data.split('#')
+    elif call.data[:14] == "del_notif_deny":
+        _, user_id = call.data.split("#")
         keyboard = types.InlineKeyboardMarkup()
-        bot.edit_message_reply_markup(chat_id=call.message.chat.id,
-                                      message_id=call.message.id,
-                                      reply_markup=keyboard)
+        bot.edit_message_reply_markup(
+            chat_id=call.message.chat.id,
+            message_id=call.message.id,
+            reply_markup=keyboard,
+        )
         main_menu(user_id)
 
-    elif call.data[:6] == 'delete':
+    elif call.data[:6] == "delete":
         delete_notif = find_notif(call.data[6:])
         keyboard = types.InlineKeyboardMarkup()
-        bot.edit_message_reply_markup(chat_id=call.message.chat.id,
-                                      message_id=call.message.id,
-                                      reply_markup=keyboard)
+        bot.edit_message_reply_markup(
+            chat_id=call.message.chat.id,
+            message_id=call.message.id,
+            reply_markup=keyboard,
+        )
 
         key_yes = types.InlineKeyboardButton(
-            text='Да',
-            callback_data='del_notif_conf#' + call.data[6:])
+            text="Да", callback_data="del_notif_conf#" + call.data[6:]
+        )
         keyboard.add(key_yes)
 
         key_no = types.InlineKeyboardButton(
-            text='Нет',
-            callback_data='del_notif_deny#' + str(delete_notif.user_id))
+            text="Нет", callback_data="del_notif_deny#" + str(delete_notif.user_id)
+        )
         keyboard.add(key_no)
 
-        format1 = '%d.%m.%Y'
-        format2 = '%H:%M'
+        format1 = "%d.%m.%Y"
+        format2 = "%H:%M"
         bot.send_message(
             delete_notif.user_id,
-            'Вы дествительно хотите удалить напоминалку, которая сработает\n' +
-            f'{datetime.fromtimestamp(delete_notif.time).strftime(format1)} в '
-            f'{datetime.fromtimestamp(delete_notif.time).strftime(format2)}?\n'
-            f'Текст напоминалки:\n{delete_notif.body}',
-            reply_markup=keyboard)
+            "Вы дествительно хотите удалить напоминалку, которая сработает\n"
+            + f"{datetime.fromtimestamp(delete_notif.time).strftime(format1)} в "
+            f"{datetime.fromtimestamp(delete_notif.time).strftime(format2)}?\n"
+            f"Текст напоминалки:\n{delete_notif.body}",
+            reply_markup=keyboard,
+        )
 
-    elif call.data[:6] == 'change':
+    elif call.data[:6] == "change":
         keyboard = types.InlineKeyboardMarkup()
-        bot.edit_message_reply_markup(chat_id=call.message.chat.id,
-                                      message_id=call.message.id,
-                                      reply_markup=keyboard)
+        bot.edit_message_reply_markup(
+            chat_id=call.message.chat.id,
+            message_id=call.message.id,
+            reply_markup=keyboard,
+        )
 
-        bot.send_message(call.message.chat.id,
-                         'Введите новое время в формате чч:мм')
-        bot.register_next_step_handler(call.message, get_time, True,
-                                       int(call.data[6:]))
-    elif call.data[:2] == 'my':
+        bot.send_message(call.message.chat.id, "Введите новое время в формате чч:мм")
+        bot.register_next_step_handler(call.message, get_time, True, int(call.data[6:]))
+    elif call.data[:2] == "my":
         keyboard = types.InlineKeyboardMarkup()
-        bot.edit_message_reply_markup(chat_id=call.message.chat.id,
-                                      message_id=call.message.id,
-                                      reply_markup=keyboard)
+        bot.edit_message_reply_markup(
+            chat_id=call.message.chat.id,
+            message_id=call.message.id,
+            reply_markup=keyboard,
+        )
 
         notif = find_notif(call.data[2:])
         if notif is None:
-            bot.send_message(call.message.chat.id,
-                             'Ой упс ахааха, что-то пошло не так :(')
+            bot.send_message(
+                call.message.chat.id, "Ой упс ахааха, что-то пошло не так :("
+            )
             main_menu(call.message.chat.id)
             return
 
         if notif.time_interval % (60 * 60 * 24) == 0:
-            repeat = 'дней'
+            repeat = "дней"
             time = notif.time_interval // (60 * 60 * 24)
         else:
-            repeat = 'часов'
+            repeat = "часов"
             time = notif.time_interval // (60 * 60)
 
-        format1 = '%d.%m.%Y'
-        format2 = '%H:%M'
+        format1 = "%d.%m.%Y"
+        format2 = "%H:%M"
         bot.send_message(
             call.message.chat.id,
-            f'Ближайшее сообщение придёт '
-            f'{datetime.fromtimestamp(notif.time).strftime(format1)} в '
-            f'{datetime.fromtimestamp(notif.time).strftime(format2)}\n\n'
-            f'Количество {repeat} через которые бот будет слать сообщения:\n'
-            f'{time}\n\n'
-            f'Текст сообщения:\n{notif.body}')
+            f"Ближайшее сообщение придёт "
+            f"{datetime.fromtimestamp(notif.time).strftime(format1)} в "
+            f"{datetime.fromtimestamp(notif.time).strftime(format2)}\n\n"
+            f"Количество {repeat} через которые бот будет слать сообщения:\n"
+            f"{time}\n\n"
+            f"Текст сообщения:\n{notif.body}",
+        )
 
 
 def get_user_interval(message, time, date, time_type, change, prev_notif_numb):
     try:
         time_interval = int(message.text)
-    except:
-        bot.send_message(message.from_user.id,
-                         'Интервал должен быть целым положительным числом!\n'
-                         'Попробуйте ещё раз.')
-        bot.register_next_step_handler(message, get_user_interval, time, date,
-                                       time_type, change, prev_notif_numb)
-        return
-    try:
-        if time_type == 'Раз в несколько дней':
+        if time_type == "Раз в несколько дней":
             assert 0 < time_interval <= 31  # максимальный интервал - месяц
-        elif time_type == 'Раз в несколько часов':
+        elif time_type == "Раз в несколько часов":
             assert 0 < time_interval <= 24 * 31
-    except:
+    except TypeError:
         bot.send_message(
             message.from_user.id,
-            'Интервал либо слишком большой, либо слишком маленький :(\n'
-            'Попробуй ещё раз.')
-        bot.register_next_step_handler(message, get_user_interval, time, date,
-                                       time_type, change, prev_notif_numb)
+            "Интервал должен быть целым положительным числом!\n" "Попробуйте ещё раз.",
+        )
+        bot.register_next_step_handler(
+            message, get_user_interval, time, date, time_type, change, prev_notif_numb
+        )
+        return
+    except ValueError:
+        bot.send_message(
+            message.from_user.id,
+            "А где текст?? Нам нужен текст :(\n"
+            "Попробуй ещё раз.",
+        )
+        bot.register_next_step_handler(
+            message, get_user_interval, time, date, time_type, change, prev_notif_numb
+        )
+        return
+    except AssertionError:
+        bot.send_message(
+            message.from_user.id,
+            "Интервал либо слишком большой, либо слишком маленький :(\n"
+            "Попробуй ещё раз.",
+        )
+        bot.register_next_step_handler(
+            message, get_user_interval, time, date, time_type, change, prev_notif_numb
+        )
         return
 
-    if time_type == 'Раз в несколько дней':
+    if time_type == "Раз в несколько дней":
         time_interval *= 60 * 60 * 24
-    elif time_type == 'Раз в несколько часов':
+    elif time_type == "Раз в несколько часов":
         time_interval *= 60 * 60
 
     if not change:
-        bot.send_message(message.from_user.id,
-                         'Какое сообщение должен присылать бот?')
+        bot.send_message(message.from_user.id, "Какое сообщение должен присылать бот?")
     else:
-        bot.send_message(message.from_user.id,
-                         'Какое новое сообщение должен присылать бот?')
+        bot.send_message(
+            message.from_user.id, "Какое новое сообщение должен присылать бот?"
+        )
 
-    bot.register_next_step_handler(message, get_body, time, date,
-                                   time_interval, change, prev_notif_numb)
+    bot.register_next_step_handler(
+        message, get_body, time, date, time_interval, change, prev_notif_numb
+    )
 
 
 bot.polling(none_stop=True, interval=0)
