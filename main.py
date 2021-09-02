@@ -68,7 +68,7 @@ for notif_id in database:
         time_int=int(notif['time_int']),
         notif_id=int(notif_id)
     ))
-bot = telebot.TeleBot("key")
+bot = telebot.TeleBot("1881102997:AAGN4lUMa86Q9TZwcv3tD3GFmf8qUyVa_-o")
 event = threading.Event()
 notifications_lock = threading.Lock()
 event_lock = threading.Lock()
@@ -98,7 +98,7 @@ def notif_handler():
 
         while curr_request_time <= curr_time:
             bot.send_message(curr_request.user_id, curr_request.body)
-            database.pop(curr_request.notif_id)
+            database.pop(str(curr_request.notif_id))
             database_update()
             notifications = notifications.remove(curr_request)
             next_notif_time = curr_request_time + curr_request.time_interval
@@ -154,7 +154,7 @@ def main_menu(user_id):
     key_my_notif = types.KeyboardButton(text="Мои напоминалки")
     keyboard.add(key_my_notif)
 
-    bot.send_message(user_id, text="Что вам угодно, повелитель?", reply_markup=keyboard)
+    bot.send_message(user_id, text="Что Вам угодно?", reply_markup=keyboard)
 
 
 def show_notifications(chat_id, callback=""):
