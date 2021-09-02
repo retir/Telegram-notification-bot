@@ -68,7 +68,7 @@ for notif_id in database:
         time_int=int(notif['time_int']),
         notif_id=int(notif_id)
     ))
-bot = telebot.TeleBot("1881102997:AAGN4lUMa86Q9TZwcv3tD3GFmf8qUyVa_-o")
+bot = telebot.TeleBot("key")
 event = threading.Event()
 notifications_lock = threading.Lock()
 event_lock = threading.Lock()
