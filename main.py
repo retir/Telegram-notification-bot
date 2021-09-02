@@ -3,21 +3,36 @@ from telebot import types
 from datetime import datetime
 from RBTree import RedBlackTree
 import threading
+import json
 
-notifications_count = 0
+
+try:
+    with open('data.txt') as json_database:
+        database = json.load(json_database)
+except json.JSONDecodeError:
+    database = {}
+    with open('data.txt', 'w') as json_database:
+        json.dump(database, json_database)
+
+notifications_count = len(database)
 
 
 class Notification:
-    def __init__(self, time, body, date, user_id, time_interval, time_int=0):
-        global notifications_count
-        self.notif_id = notifications_count
-        notifications_count += 1
+    def __init__(self, time, body, date, user_id, time_interval, time_int=0, notif_id=None):
+        if notif_id is None:
+            global notifications_count
+            self.notif_id = notifications_count
+            notifications_count += 1
+        else:
+            self.notif_id = notif_id
+
         if time_int == 0:
             self.time = datetime.strptime(
                 date + " " + time, "%d.%m.%Y %H:%M"
             ).timestamp()
         else:
             self.time = time_int
+
         self.user_id = user_id
         self.body = body
         self.time_interval = time_interval
@@ -41,11 +56,28 @@ class Notification:
         return self.time != other.time
 
 
-bot = telebot.TeleBot("key")
 notifications = RedBlackTree()
+for notif_id in database:
+    notif = database[notif_id]
+    notification = notifications.insert(Notification(
+        time=notif['time'],
+        date=notif['date'],
+        body=notif['body'],
+        user_id=int(notif['user_id']),
+        time_interval=int(notif['time_interval']),
+        time_int=int(notif['time_int']),
+        notif_id=int(notif_id)
+    ))
+bot = telebot.TeleBot("key")
 event = threading.Event()
 notifications_lock = threading.Lock()
 event_lock = threading.Lock()
+
+
+def database_update():
+    global database
+    with open('data.txt', 'w') as json_database:
+        json.dump(database, json_database)
 
 
 def notif_handler():
@@ -66,6 +98,8 @@ def notif_handler():
 
         while curr_request_time <= curr_time:
             bot.send_message(curr_request.user_id, curr_request.body)
+            database.pop(curr_request.notif_id)
+            database_update()
             notifications = notifications.remove(curr_request)
             next_notif_time = curr_request_time + curr_request.time_interval
             if curr_request.time_interval != 0 and next_notif_time < curr_time:
@@ -76,6 +110,13 @@ def notif_handler():
             if curr_request.time_interval != 0:
                 curr_request.time = next_notif_time
                 notifications = notifications.insert(curr_request)
+                database[curr_request.notif_id] = {'time': '',
+                                                   'date': '',
+                                                   'time_int': curr_request.time,
+                                                   'body': curr_request.body,
+                                                   'user_id': curr_request.user_id,
+                                                   'time_interval': curr_request.time_interval}
+                database_update()
 
             if notifications.get_min() is None:
                 break
@@ -370,7 +411,9 @@ def find_notif(str_id):
     notifications_lock.acquire()
 
     for notif in notifications.inorder_traverse():
+        print(type(notif.notif_id), type(notif_id))
         if notif.notif_id == notif_id:
+            print('FIND')
             delete_notif = notif
             notifications_lock.release()
             return delete_notif
@@ -396,16 +439,26 @@ def none_notifications(user_id):
 #
 #     bot.send_message(message.from_user.id, 'Напоминалка изменена!')
 #     main_menu(message.from_user.id)
+#     main_menu(message.from_user.id)
 
 
 def create_new_notification(
     time, body, date, user_id, time_interval, prev_mess_id=0, new_time_int=0
 ):
     global notifications
+    global notifications_count
     notifications_lock.acquire()
     notifications = notifications.insert(
         Notification(time, body, date, user_id, time_interval, new_time_int)
     )
+    database[notifications_count - 1] = {'time': time,
+                                         'date': date,
+                                         'time_int': new_time_int,
+                                         'body': body,
+                                         'user_id': user_id,
+                                         'time_interval': time_interval}
+    database_update()
+
     notifications_lock.release()
     event_lock.acquire()
     event.set()
@@ -427,7 +480,11 @@ def notificaion_remove(notification, chat_id):
         return False
 
     notifications_lock.acquire()
+
+    database.pop(str(notification.notif_id))
+    database_update()
     notifications = notifications.remove(notification)
+    print('REMOVE')
 
     event_lock.acquire()
     event.set()
@@ -471,6 +528,8 @@ def callback_worker(call):
 
     elif call.data[:6] == "delete":
         delete_notif = find_notif(call.data[6:])
+        if delete_notif is None:
+            print('deleted notif is none WTFFF')
         keyboard = types.InlineKeyboardMarkup()
         bot.edit_message_reply_markup(
             chat_id=call.message.chat.id,
