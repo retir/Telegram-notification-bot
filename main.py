@@ -38,22 +38,22 @@ class Notification:
         self.time_interval = time_interval
 
     def __lt__(self, other):
-        return self.time < other.time
+        return (self.time, int(self.notif_id)) < (other.time, int(other.notif_id))
 
     def __gt__(self, other):
-        return self.time > other.time
+        return (self.time, int(self.notif_id)) > (other.time, int(other.notif_id))
 
     def __le__(self, other):
-        return self.time <= other.time
+        return (self.time, int(self.notif_id)) <= (other.time, int(other.notif_id))
 
     def __ge__(self, other):
-        return self.time >= other.time
+        return (self.time, int(self.notif_id)) >= (other.time, int(other.notif_id))
 
     def __eq__(self, other):
-        return self.time == other.time
+        return (self.time, int(self.notif_id)) == (other.time, int(other.notif_id))
 
     def __ne__(self, other):
-        return self.time != other.time
+        return (self.time, int(self.notif_id)) != (other.time, int(other.notif_id))
 
 
 notifications = RedBlackTree()
@@ -487,8 +487,6 @@ def notificaion_remove(notification, chat_id):
 
     notifications_lock.acquire()
 
-    print(database)
-    print(str(notification.notif_id))
     database.pop(str(notification.notif_id))
     database_update()
     notifications = notifications.remove(notification)

@@ -166,6 +166,7 @@ class RedBlackTree:
                             # The tree is now empty
                             return RedBlackTree(None)
                         else:
+                            print('Strange case')
                             self._remove_repair()
                             if self.is_left():
                                 self.parent.left = None
