@@ -88,8 +88,8 @@ class RedBlackTree:
             # Only possible with an empty tree
             self.label = label
             return self
-        if self.label == label:
-            return self
+        # if self.label == label:
+        #     return self
         elif self.label > label:
             if self.left:
                 self.left.insert(label)

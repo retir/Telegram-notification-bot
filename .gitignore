@@ -1,0 +1,13 @@
+# PyCharm
+.idea/
+__pycache__/
+*.py[cod]
+*$py.class
+
+# Окружение
+venv/
+Token.txt
+parallel.py
+data.txt
+try_catch.py
+time_try.py

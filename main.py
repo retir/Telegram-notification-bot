@@ -59,7 +59,8 @@ class Notification:
 notifications = RedBlackTree()
 for notif_id in database:
     notif = database[notif_id]
-    notification = notifications.insert(Notification(
+    print(notif_id)
+    notifications = notifications.insert(Notification(
         time=notif['time'],
         date=notif['date'],
         body=notif['body'],
@@ -68,7 +69,10 @@ for notif_id in database:
         time_int=int(notif['time_int']),
         notif_id=int(notif_id)
     ))
-bot = telebot.TeleBot("key")
+
+with open('token.txt') as token_file:
+    token = token_file.read()
+bot = telebot.TeleBot(token)
 event = threading.Event()
 notifications_lock = threading.Lock()
 event_lock = threading.Lock()
@@ -98,6 +102,7 @@ def notif_handler():
 
         while curr_request_time <= curr_time:
             bot.send_message(curr_request.user_id, curr_request.body)
+            print('Напоминалка самоудаление')
             database.pop(str(curr_request.notif_id))
             database_update()
             notifications = notifications.remove(curr_request)
@@ -110,7 +115,8 @@ def notif_handler():
             if curr_request.time_interval != 0:
                 curr_request.time = next_notif_time
                 notifications = notifications.insert(curr_request)
-                database[curr_request.notif_id] = {'time': '',
+                print('Напоминалка самодобавление')
+                database[str(curr_request.notif_id)] = {'time': '',
                                                    'date': '',
                                                    'time_int': curr_request.time,
                                                    'body': curr_request.body,
@@ -233,7 +239,7 @@ def get_time(message, change=False, prev_notif_numb=0):
     try:
         assert 0 <= int(time[0:2]) <= 23
         assert 0 <= int(time[3:5]) <= 59
-    except AssertionError:
+    except (AssertionError, ValueError):
         bot.send_message(
             message.from_user.id,
             "Неверный формат времени!\n"
@@ -451,7 +457,7 @@ def create_new_notification(
     notifications = notifications.insert(
         Notification(time, body, date, user_id, time_interval, new_time_int)
     )
-    database[notifications_count - 1] = {'time': time,
+    database[str(notifications_count - 1)] = {'time': time,
                                          'date': date,
                                          'time_int': new_time_int,
                                          'body': body,
@@ -481,6 +487,8 @@ def notificaion_remove(notification, chat_id):
 
     notifications_lock.acquire()
 
+    print(database)
+    print(str(notification.notif_id))
     database.pop(str(notification.notif_id))
     database_update()
     notifications = notifications.remove(notification)
